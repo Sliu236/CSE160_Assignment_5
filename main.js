@@ -88,7 +88,7 @@ const textureLoader = new THREE.TextureLoader();
 const mtlLoader = new MTLLoader();
 
 // skybox (sphere)
-textureLoader.load('/CSE160_Assignment_5/Desert.jpg', (texture) => {
+textureLoader.load('/Desert.jpg', (texture) => {
     const skyGeometry = new THREE.SphereGeometry(100, 30, 40); // create a large sphere
     skyGeometry.scale(-1, 1, 1); // invert the sphere to make it inside-out
 
