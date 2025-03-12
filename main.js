@@ -249,6 +249,8 @@ function loadHelicopter(position, rotationY, scale) {
                 }
             });
 
+            addHelicopterSpotlight(object, position);
+
             // 添加到场景
             scene.add(object);
         }, undefined, (error) => {
@@ -326,7 +328,29 @@ function addHeadlight(position, rotationY) {
     scene.add(headlight.target);
 }
 
+// ✈️ 添加直升机探照灯
+function addHelicopterSpotlight(helicopter, position) {
+    const spotlight = new THREE.SpotLight(0xFFFFFF, 150, 50, Math.PI / 6, 0.2, 1);
+    spotlight.castShadow = true;
+    spotlight.shadow.mapSize.width = 1024;
+    spotlight.shadow.mapSize.height = 1024;
 
+    // **光源位置（固定在机身下方）**
+    spotlight.position.set(0, 0, 0);  // 相对直升机机身
+
+    // **目标点（地面方向）**
+    const target = new THREE.Object3D();
+    target.position.set(0, -10, 0);  // 目标点设为直升机正下方
+    helicopter.add(target);
+
+    // 绑定光源
+    spotlight.target = target;
+    helicopter.add(spotlight);
+
+    // **调试工具**
+    const lightHelper = new THREE.SpotLightHelper(spotlight);
+    scene.add(lightHelper);
+}
 
 loadTent({ x: 20, y: 0, z: -20 }); 
 loadTent({ x: 20, y: 0, z: -10 }); 
