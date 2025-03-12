@@ -4,30 +4,41 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { DDSLoader } from 'three/addons/loaders/DDSLoader.js';
+import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+
 
 // 创建场景
 const scene = new THREE.Scene();
 
 // 创建相机
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.z = 5;
+camera.position.set(0, 2, 5);
 
 
 // 创建渲染器
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap; // 柔和阴影
 document.body.appendChild(renderer.domElement);
 
-// 添加光源(平行光)
-const color = 0xffffff;
-const intensity = 3;
-const light = new THREE.DirectionalLight(color, intensity);
-light.position.set(-1, 2, 4).normalize();
-scene.add(light);
+const sunLight = new THREE.DirectionalLight(0xFF4500, 2);
+sunLight.position.set(-10, 5, -10); // 低角度太阳光
+sunLight.castShadow = true;
+sunLight.shadow.mapSize.width = 1024;
+sunLight.shadow.mapSize.height = 1024;
+scene.add(sunLight);
+
 
 // 添加环境光
-const ambientLight = new THREE.AmbientLight(0x404040, 1.5); // 灰白色环境光
+const ambientLight = new THREE.AmbientLight(0xFF8C00, 0.8); // 灰白色环境光
 scene.add(ambientLight);
+
+// 添加地平线光源
+const horizonLight = new THREE.PointLight(0xFF6347, 1.5, 50); 
+horizonLight.position.set(0, 2, -20); // 低角度光源，模拟地平线光晕
+scene.add(horizonLight);
+scene.fog = new THREE.Fog(0xFFA07A, 10, 50); // 远处带点红色调
 
 
 // 创建轨道控制器
@@ -36,12 +47,6 @@ const controls = new OrbitControls(camera, renderer.domElement);
 // 加载环境贴图（反射效果）
 const cubeTextureLoader = new THREE.CubeTextureLoader();
 const envMap = cubeTextureLoader.load([
-  'https://threejs.org/examples/textures/cube/SwedishRoyalCastle/posx.jpg',
-  'https://threejs.org/examples/textures/cube/SwedishRoyalCastle/negx.jpg',
-  'https://threejs.org/examples/textures/cube/SwedishRoyalCastle/posy.jpg',
-  'https://threejs.org/examples/textures/cube/SwedishRoyalCastle/negy.jpg',
-  'https://threejs.org/examples/textures/cube/SwedishRoyalCastle/posz.jpg',
-  'https://threejs.org/examples/textures/cube/SwedishRoyalCastle/negz.jpg'
 ]);
 
 // 定义textrueLoader
@@ -57,7 +62,7 @@ dirtTexture.repeat.set(5, 5); // 让纹理重复 5x5 次
 // 创建带有地板贴图的材质
 const planeMaterial = new THREE.MeshPhysicalMaterial({
   map: dirtTexture,      // 应用地板纹理
-  metalness: 0.1,        // 低金属度
+  metalness: 0.2,        // 低金属度
   roughness: 0.8,        // 适当的粗糙度，使地面更真实
   envMap: envMap,        // 反射环境贴图
   envMapIntensity: 0.5,  // 反射强度
@@ -132,48 +137,50 @@ function createCube(geometry, color, x) {
     return cube;
 }
 
-// 1️⃣ 创建 Canvas 作为纹理
-const canvas = document.createElement("canvas");
-canvas.width = 512;
-canvas.height = 512;
-const ctx = canvas.getContext("2d");
+// 🚁 创建停机坪函数
+function createHelipad(position) {
+    // 1️⃣ 创建 Canvas 作为纹理
+    const canvas = document.createElement("canvas");
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext("2d");
 
-// 2️⃣ 清空背景，使其透明
-ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // 2️⃣ 清空背景，使其透明
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-// 3️⃣ 画白色圆圈（停机坪的标志）
-ctx.strokeStyle = "rgba(255, 255, 255, 1)"; // 纯白色
-ctx.lineWidth = 15;
-ctx.beginPath();
-ctx.arc(256, 256, 200, 0, Math.PI * 2);
-ctx.stroke();
+    // 3️⃣ 画白色圆圈（停机坪的标志）
+    ctx.strokeStyle = "rgba(255, 255, 255, 1)"; // 纯白色
+    ctx.lineWidth = 15;
+    ctx.beginPath();
+    ctx.arc(256, 256, 200, 0, Math.PI * 2);
+    ctx.stroke();
 
-// 4️⃣ 画一个 “H” 标志
-ctx.font = "bold 220px Arial";
-ctx.fillStyle = "rgba(255, 255, 255, 1)"; // 纯白色
-ctx.textAlign = "center";
-ctx.textBaseline = "middle";
-ctx.fillText("H", 256, 256);
+    // 4️⃣ 画一个 “H” 标志
+    ctx.font = "bold 220px Arial";
+    ctx.fillStyle = "rgba(255, 255, 255, 1)"; // 纯白色
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("H", 256, 256);
 
-// 5️⃣ 创建纹理
-const texture = new THREE.CanvasTexture(canvas);
-texture.needsUpdate = true;
+    // 5️⃣ 创建纹理
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
 
-// 6️⃣ 创建平面并应用纹理
-const helipadMaterial = new THREE.MeshBasicMaterial({ 
-    map: texture, 
-    transparent: true,  // 启用透明模式
-    side: THREE.DoubleSide 
-});
+    // 6️⃣ 创建平面并应用纹理
+    const helipadMaterial = new THREE.MeshBasicMaterial({ 
+        map: texture, 
+        transparent: true,  // 启用透明模式
+        side: THREE.DoubleSide 
+    });
 
-const helipadGeometry = new THREE.CircleGeometry(4, 64); // 直径 5，64 个面
-const helipad = new THREE.Mesh(helipadGeometry, helipadMaterial);
+    const helipadGeometry = new THREE.CircleGeometry(4, 64); // 直径 4，64 个面
+    const helipad = new THREE.Mesh(helipadGeometry, helipadMaterial);
 
-// 7️⃣ 旋转平面使其水平，并调整高度
-helipad.rotation.x = -Math.PI / 2;
-helipad.position.set(5, 0.01, -15); // 设置停机坪的位置，稍微浮起避免Z冲突
-scene.add(helipad);
-
+    // 7️⃣ 旋转平面使其水平，并调整高度
+    helipad.rotation.x = -Math.PI / 2;
+    helipad.position.set(position.x, position.y, position.z); // 设置停机坪的位置
+    scene.add(helipad);
+}
 
 
 function loadTent(position, rotationY = Math.PI / 3, scale = 0.0001) {
@@ -214,9 +221,6 @@ function loadTent(position, rotationY = Math.PI / 3, scale = 0.0001) {
     });
 }
 
-// **调用函数，在不同位置创建帐篷**
-
-
 
 // 🚁 定义一个函数来加载直升机
 function loadHelicopter(position, rotationY, scale) {
@@ -255,8 +259,6 @@ function loadHelicopter(position, rotationY, scale) {
 
 
 
-// APC 1
-// 🚙 定义一个函数来加载装甲车
 function loadAPCModel(position, rotationY, scale) {
     const mtlLoader = new MTLLoader();
     mtlLoader.setPath('./models/APC1/');
@@ -286,45 +288,124 @@ function loadAPCModel(position, rotationY, scale) {
                     child.receiveShadow = true;
                 }
             });
-
-            // 添加到场景
+          
             scene.add(object);
         }, undefined, (error) => {
             console.error('🚨 加载 APC OBJ 失败:', error);
         });
     });
 }
-// 加载帐篷
-loadTent({ x: 20, y: 0, z: -20 }); // 第一个帐篷
-loadTent({ x: 20, y: 0, z: -10 }); // 第二个帐篷
-// 直升机 1
+
+function addHeadlight(position, rotationY) {
+    const headlight = new THREE.SpotLight(0xFFFFFF, 100, 20, Math.PI / 6, 0.3, 1);
+    headlight.castShadow = true;
+    headlight.shadow.mapSize.width = 1024;
+    headlight.shadow.mapSize.height = 1024;
+
+    // **计算光源位置**
+    const headlightOffset = -0.5; // 车灯偏移车头的距离
+    const headlightHeight = 1; // 车灯的高度
+
+    // **计算朝向 (通过旋转计算前进方向)**
+    const directionX = Math.sin(rotationY) * headlightOffset;
+    const directionZ = Math.cos(rotationY) * headlightOffset;
+
+    // **设置光源位置**
+    headlight.position.set(position.x + directionX, headlightHeight, position.z + directionZ);
+
+    // **设置目标点**
+    const targetOffset = 10; // 光照方向的远处目标
+    headlight.target.position.set(
+        position.x + Math.sin(rotationY) * targetOffset,
+        1.5, // 目标点稍微向下
+        position.z + Math.cos(rotationY) * targetOffset
+    );
+
+    // **添加到场景**
+    scene.add(headlight);
+    scene.add(headlight.target);
+}
+
+
+
+loadTent({ x: 20, y: 0, z: -20 }); 
+loadTent({ x: 20, y: 0, z: -10 }); 
 loadHelicopter({ x: 4, y: 0.02, z: -14 }, 0, 2);
-
-// 直升机 2
 loadHelicopter({ x: 4, y: 19, z: -14 }, Math.PI / 3, 2);
+loadHelicopter({ x: -25, y: 14, z: -14 }, Math.PI / 3, 2);
 
-// 直升机 3
-loadHelicopter({ x: -20, y: 14, z: -14 }, Math.PI / 3, 2);
 
-// 生成第一辆装甲车
 loadAPCModel({ x: 15, y: 0, z: 0 }, Math.PI / 2 + Math.PI, 0.0001);
+addHeadlight({ x: 15, y: 0, z: 0 }, Math.PI / 2 + Math.PI);
 
-// 生成第二辆装甲车
-loadAPCModel({ x: 7, y: 0, z: 10 }, Math.PI / 5.5 + Math.PI, 0.0001);
+loadAPCModel({ x: 15, y: 0, z: -5 }, Math.PI / 2.5 + Math.PI, 0.0001);
+addHeadlight({ x: 15, y: 0, z: -5 }, Math.PI / 2.5 + Math.PI);
 
-// 生成第三辆装甲车
+loadAPCModel({ x: 3, y: 0, z: 5 }, Math.PI / 5.5 + Math.PI, 0.0001);
+addHeadlight({ x: 3, y: 0, z: 5 }, Math.PI / 5.5 + Math.PI);
+
 loadAPCModel({ x: 12, y: 0, z: 20 }, Math.PI / 5 + Math.PI, 0.0001);
+addHeadlight({ x: 12, y: 0, z: 20 }, Math.PI / 5 + Math.PI);
+
+loadAPCModel({ x: -7, y: 0, z: -10 }, Math.PI / 4.5 + Math.PI, 0.0001);
+addHeadlight({ x: -7, y: 0, z: -10 }, Math.PI / 4.5 + Math.PI);
+
+
+createHelipad({ x: 5, y: 0.01, z: -15 });
+
+
+const orbitControls = new OrbitControls(camera, renderer.domElement);
+const fpControls = new PointerLockControls(camera, document.body);
+let isFirstPerson = false; // 是否为第一人称模式
+
+document.addEventListener('click', () => fpControls.lock()); // 点击进入第一人称模式
+fpControls.addEventListener('lock', () => {isFirstPerson = true; orbitControls.enabled = false; console.log("进入第一人称模式");});
+fpControls.addEventListener('unlock', () => {isFirstPerson = false; orbitControls.enabled = true; console.log("退出第一人称模式");});
+
+const keys = { forward: false, backward: false, left: false, right: false };
+function handleUserInput() {
+    document.addEventListener('keydown', (event) => {
+        if (event.code === 'KeyW') keys.forward = true;
+        if (event.code === 'KeyS') keys.backward = true;
+        if (event.code === 'KeyA') keys.left = true;
+        if (event.code === 'KeyD') keys.right = true;
+    });
+    document.addEventListener('keyup', (event) => {
+        if (event.code === 'KeyW') keys.forward = false;
+        if (event.code === 'KeyS') keys.backward = false;
+        if (event.code === 'KeyA') keys.left = false;
+        if (event.code === 'KeyD') keys.right = false;
+    });
+}
+handleUserInput();
+
+// **🚶 第一人称相机移动**
+const moveSpeed = 0.05;
+function updateCameraMovement() {
+    const direction = new THREE.Vector3();
+    if (keys.forward) direction.z -= 1;
+    if (keys.backward) direction.z += 1;
+    if (keys.left) direction.x -= 1;
+    if (keys.right) direction.x += 1;
+    direction.normalize();
+    direction.applyQuaternion(camera.quaternion);
+    camera.position.addScaledVector(direction, moveSpeed);
+
+    if (camera.position.y < 1) { 
+        camera.position.y = 1;
+    }
+
+}
 
 
 
 // 动画循环
-function animate(time) {
-    time *= 0.001; // 将时间单位转换为秒
-  
-    // 更新控制器
-    controls.update();
+function animate() {
+    updateCameraMovement();
     renderer.render(scene, camera);
     requestAnimationFrame(animate);
-  }
+    lightHelper.update();
+    cameraHelper.update();
+}
 
 animate();
