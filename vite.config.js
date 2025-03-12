@@ -5,7 +5,6 @@ export default defineConfig({
   build: {
     outDir: 'dist',
   },
-  assetsInclude: ['**/*.gltf', '**/*.glb', '**/*.obj', '**/*.mtl', '**/*.jpg', '**/*.png'] // 确保这些资源被正确包含
 });
 
 
