@@ -1,13 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8">
-		<title>CSE160 ASGN5 -- Three.js</title>
-		<style>
-			body { margin: 0; }
-		</style>
-	</head>
-	<body>
-		<script type="module" src="/main.js"></script>
-	</body>
+<head>
+    <meta charset="utf-8">
+    <title>CSE160 ASGN5 -- Three.js</title>
+    <style>
+        body { margin: 0; font-family: Arial, sans-serif; color: white; }
+        canvas { display: block; }
+        
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 8px;
+            font-size: 14px;
+            max-width: 300px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="info">
+        <h2>How to?</h2>
+		<p><b>Mouse Wheel</b> - Zoom in/out</p>
+		<p><b>Right Mouse Button</b> - drag camera</p>
+		<p><b>Left Mouse Button</b> - Enable FPS mode</p>
+        <p><b>WASD</b> - move the camera</p>
+        <p><b>Mouse</b> - rotate the camera</canvas></p>
+        <p><b>1</b> - Free view mode</p>
+        <p><b>2</b> - Gunner view</p>
+        <p><b>3</b> - Driver view</p>
+        <p><b>4</b> - Pilot view</p>
+        <p>Press<b>ESC</b> Disable FPS mode</p>
+		<p>When you first enter the interface, please wait about 20 seconds for the shader to finish loading the model.</p>
+    </div>
+
+    <script type="module" src="/main.js"></script>
+
+</body>
 </html>
