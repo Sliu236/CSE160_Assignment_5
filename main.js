@@ -10,10 +10,6 @@ import { PointerLockControls } from 'three/addons/controls/PointerLockControls.j
 // 创建场景
 const scene = new THREE.Scene();
 
-// 创建相机
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 2, 5);
-
 
 // 创建渲染器
 const renderer = new THREE.WebGLRenderer();
@@ -22,27 +18,71 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap; // 柔和阴影
 document.body.appendChild(renderer.domElement);
 
-const sunLight = new THREE.DirectionalLight(0xFF4500, 2);
-sunLight.position.set(-10, 5, -10); // 低角度太阳光
+// 创建相机
+// 定义多个摄像机
+const cameras = {
+    main: new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000),
+    gunner: new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000),
+    driver: new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000),
+    pilot: new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
+};
+
+// 设置各个摄像机的位置
+cameras.main.position.set(0, 2, 5);   // 自由摄像机
+cameras.gunner.position.set(3.16, 2.10, 5.69);  // 机枪手视角
+cameras.driver.position.set(14.88, 1.38, -4.10); // 驾驶员视角
+cameras.pilot.position.set(-25.54, 13.55, -15.72); // 飞行员视角
+
+const controls = {
+    orbit: new OrbitControls(cameras.main, renderer.domElement),
+    gunner: new PointerLockControls(cameras.gunner, document.body),
+    driver: new PointerLockControls(cameras.driver, document.body),
+    pilot: new PointerLockControls(cameras.pilot, document.body)
+};
+
+// 设定默认活动摄像机
+let activeCamera = cameras.main;
+
+
+
+
+const sunLight = new THREE.DirectionalLight(0xFF4500, 3);
+sunLight.position.set(-50, 20, -50); // 更远更高
 sunLight.castShadow = true;
-sunLight.shadow.mapSize.width = 1024;
-sunLight.shadow.mapSize.height = 1024;
+
+// 调整阴影范围，让光线更柔和
+sunLight.shadow.camera.left = -50;
+sunLight.shadow.camera.right = 50;
+sunLight.shadow.camera.top = 50;
+sunLight.shadow.camera.bottom = -50;
+sunLight.shadow.camera.near = 1;
+sunLight.shadow.camera.far = 200;
+
+// 增加阴影的模糊度
+sunLight.shadow.mapSize.width = 2048;
+sunLight.shadow.mapSize.height = 2048;
+sunLight.shadow.radius = 8; // 让阴影柔和一些
+
 scene.add(sunLight);
 
 
+
 // 添加环境光
-const ambientLight = new THREE.AmbientLight(0xFF8C00, 0.8); // 灰白色环境光
+const ambientLight = new THREE.AmbientLight(0xFF8C00, 0.5); // 灰白色环境光
 scene.add(ambientLight);
 
 // 添加地平线光源
 const horizonLight = new THREE.PointLight(0xFF6347, 1.5, 50); 
 horizonLight.position.set(0, 2, -20); // 低角度光源，模拟地平线光晕
 scene.add(horizonLight);
-scene.fog = new THREE.Fog(0xFFA07A, 10, 50); // 远处带点红色调
+scene.fog = new THREE.Fog(0xFFA07A, 20, 50); // 远处带点红色调
 
 
-// 创建轨道控制器
-const controls = new OrbitControls(camera, renderer.domElement);
+// 添加半球光源
+const hemisphereLight = new THREE.HemisphereLight(0xFF6347, 0x8B4513, 0.6);
+scene.add(hemisphereLight);
+
+
 
 // 加载环境贴图（反射效果）
 const cubeTextureLoader = new THREE.CubeTextureLoader();
@@ -55,7 +95,7 @@ const mtlLoader = new MTLLoader();
 
 // 天空
 textureLoader.load('./Desert.jpg', (texture) => {
-    const skyGeometry = new THREE.SphereGeometry(60, 30, 40); // 大球体
+    const skyGeometry = new THREE.SphereGeometry(100, 30, 40); // 大球体
     skyGeometry.scale(-1, 1, 1); // 翻转法线，使纹理贴在球体内部
 
     const skyMaterial = new THREE.MeshBasicMaterial({
@@ -76,10 +116,10 @@ dirtTexture.wrapT = THREE.RepeatWrapping;
 // 创建带有地板贴图的材质
 const planeMaterial = new THREE.MeshPhysicalMaterial({
   map: dirtTexture,      // 应用地板纹理
-  metalness: 0.2,        // 低金属度
+  metalness: 0.01,        // 低金属度
   roughness: 0.8,        // 适当的粗糙度，使地面更真实
   envMap: envMap,        // 反射环境贴图
-  envMapIntensity: 0.5,  // 反射强度
+  envMapIntensity: 0.1,  // 反射强度
   clearcoat: 0.3,        // 轻微的透明反射层
   clearcoatRoughness: 0.1 // 透明层的粗糙度
 });
@@ -89,6 +129,8 @@ const planeSize = 100;
 dirtTexture.repeat.set(planeSize / 4, planeSize / 4); // 让纹理按比例覆盖
 const planeGeometry = new THREE.PlaneGeometry(planeSize, planeSize);
 const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+plane.receiveShadow = true;
+
 
 plane.rotation.x = -Math.PI / 2; // 旋转平面使其水平
 plane.position.y = 0; // 将平面稍微下移
@@ -101,12 +143,17 @@ roadTexture.wrapS = THREE.RepeatWrapping;
 roadTexture.wrapT = THREE.RepeatWrapping;
 roadTexture.repeat.set(8, 1); // 让纹理重复 3 次，模拟拉长的道路效果
 
+
 // 创建道路材质
-const roadMaterial = new THREE.MeshStandardMaterial({
-    map: roadTexture,
-    metalness: 0.2,   // 轻微的金属度
-    roughness: 0.7,   // 适当的粗糙度
-    side: THREE.DoubleSide
+const roadMaterial = new THREE.MeshPhysicalMaterial({
+    map: roadTexture,   // 贴图
+    metalness: 0.5,     // 让道路有部分金属反射性
+    roughness: 0.3,     // 让表面稍微光滑以增强反射
+    envMap: envMap,     // 添加环境贴图，使道路可以反射天空
+    envMapIntensity: 1.0,  // 反射强度
+    clearcoat: 0.5,     // 额外的透明光泽层
+    clearcoatRoughness: 0.1,  // 透明层的粗糙度，值越小越光滑
+    side: THREE.DoubleSide // 双面渲染
 });
 
 // 创建道路平面
@@ -119,38 +166,41 @@ const road = new THREE.Mesh(roadGeometry, roadMaterial);
 road.rotation.x = -Math.PI / 2; // 让道路水平
 road.rotation.z = -Math.PI / 3;
 road.position.set(0, 0.01, 0); // 稍微浮起，防止与地面重叠
-
+road.receiveShadow = true;
 scene.add(road);
 
 
-// 砖墙纹理
-const brickTexture = textureLoader.load('./brickwall.png'); 
+function createBrickWall(position = { x: 0, y: 0, z: 0 }, size = { width: 1, height: 1, depth: 1 }) {
+    // 加载砖墙纹理
+    const brickTexture = textureLoader.load('./brickwall.png'); 
+    brickTexture.wrapS = THREE.RepeatWrapping;
+    brickTexture.wrapT = THREE.RepeatWrapping;
+    brickTexture.repeat.set(size.width, size.height); // 让砖纹理适配墙的大小
 
-// 砖墙材质
-const brickMaterial = new THREE.MeshStandardMaterial({
-    map: brickTexture, // 贴图
-    roughness: 0.5,    // 适中的粗糙度
-    metalness: 0.1     // 低金属度
-  });
+    // 创建砖墙材质
+    const brickMaterial = new THREE.MeshStandardMaterial({
+        map: brickTexture, // 贴图
+        roughness: 0.5,    // 适中的粗糙度
+        metalness: 0.1     // 低金属度
+    });
 
+    // 创建砖墙几何体
+    const brickGeometry = new THREE.BoxGeometry(size.width, size.height, size.depth);
+    const brickWall = new THREE.Mesh(brickGeometry, brickMaterial);
+    
+    // 设置砖墙位置
+    brickWall.position.set(position.x, position.y, position.z);
+    
+    // 允许阴影
+    brickWall.castShadow = true;
+    brickWall.receiveShadow = true;
 
-// 砖墙
-const brickGeometry = new THREE.BoxGeometry(1, 1, 1);
-const brickCube = new THREE.Mesh(brickGeometry, brickMaterial);
-brickCube.position.set(5, 0, 0); // 让立方体位于 x=3
-scene.add(brickCube);
+    // 添加到场景
+    scene.add(brickWall);
 
-
-// 创建几何体（立方体）
-const geometry = new THREE.BoxGeometry();
-
-function createCube(geometry, color, x) {
-  const material = new THREE.MeshStandardMaterial({ color });
-  const cube = new THREE.Mesh(geometry, material);
-  scene.add(cube);
-  cube.position.x = x;
-    return cube;
+    return brickWall;
 }
+
 
 // 🚁 创建停机坪函数
 function createHelipad(position) {
@@ -314,14 +364,15 @@ function loadAPCModel(position, rotationY, scale) {
 }
 
 function addHeadlight(position, rotationY) {
-    const headlight = new THREE.SpotLight(0xFFFFFF, 100, 20, Math.PI / 6, 0.3, 1);
+    // 🚗 **增强车灯光源**
+    const headlight = new THREE.SpotLight(0xFFFFFF, 20, 10, Math.PI / 3, 0.3, 1); 
     headlight.castShadow = true;
-    headlight.shadow.mapSize.width = 1024;
-    headlight.shadow.mapSize.height = 1024;
+    headlight.shadow.mapSize.width = 2048;
+    headlight.shadow.mapSize.height = 2048;
 
     // **计算光源位置**
-    const headlightOffset = -0.5; // 车灯偏移车头的距离
-    const headlightHeight = 1; // 车灯的高度
+    const headlightOffset = 1.5; // 车灯前伸
+    const headlightHeight = 1; // 车灯高度
 
     // **计算朝向 (通过旋转计算前进方向)**
     const directionX = Math.sin(rotationY) * headlightOffset;
@@ -330,18 +381,26 @@ function addHeadlight(position, rotationY) {
     // **设置光源位置**
     headlight.position.set(position.x + directionX, headlightHeight, position.z + directionZ);
 
-    // **设置目标点**
-    const targetOffset = 10; // 光照方向的远处目标
-    headlight.target.position.set(
-        position.x + Math.sin(rotationY) * targetOffset,
-        1.5, // 目标点稍微向下
-        position.z + Math.cos(rotationY) * targetOffset
+    // **确保光源目标点正确**
+    const target = new THREE.Object3D();
+    target.position.set(
+        position.x + Math.sin(rotationY) * 10, 
+        0.5, 
+        position.z + Math.cos(rotationY) * 10
     );
+    scene.add(target);
+    headlight.target = target; 
+
+    // **强制更新光源**
+    setInterval(() => {
+        headlight.intensity = 20; 
+        setTimeout(() => { headlight.intensity = 20; }, 50);
+    }, 5000);
 
     // **添加到场景**
     scene.add(headlight);
-    scene.add(headlight.target);
 }
+
 
 // ✈️ 添加直升机探照灯
 function addHelicopterSpotlight(helicopter, position) {
@@ -362,6 +421,29 @@ function addHelicopterSpotlight(helicopter, position) {
     spotlight.target = target;
     helicopter.add(spotlight);
 }
+
+function createRuinedWalls() {
+    createBrickWall({ x: -10, y: 1, z: 7 }, { width: 4, height: 2, depth: 0.5 });
+    let wall1 = createBrickWall({ x: -10, y: 0.5, z: 6 }, { width: 3, height: 1, depth: 0.5 });
+    wall1.rotation.x = Math.PI / 3;
+    let wall2 = createBrickWall({ x: -14, y: 0.5, z: 8 }, { width: 1, height: 1, depth: 0.5 });
+    wall2.rotation.z = -Math.PI / 4;
+
+    createBrickWall({ x: -9, y: 0.5, z: 8 }, { width: 1, height: 1, depth: 0.5 });
+    createBrickWall({ x: -14, y: 0.3, z: 9 }, { width: 1.5, height: 0.6, depth: 0.5 });
+    createBrickWall({ x: -11, y: 0.2, z: 11 }, { width: 0.7, height: 0.4, depth: 0.5 });
+
+    let wall3 = createBrickWall({ x: -8, y: 0.5, z: 9 }, { width: 2, height: 1, depth: 0.5 });
+    wall3.rotation.z = Math.PI / 5;
+    let wall4 = createBrickWall({ x: -9, y: 0.8, z: 10 }, { width: 2, height: 1, depth: 0.5 });
+    wall4.rotation.z = Math.PI / 10;
+
+    createBrickWall({ x: -10, y: 0.1, z: 8 }, { width: 0.5, height: 0.2, depth: 0.5 });
+    createBrickWall({ x: -12, y: 0.1, z: 12 }, { width: 0.6, height: 0.3, depth: 0.5 });
+    createBrickWall({ x: -8.5, y: 0.1, z: 10 }, { width: 0.6, height: 0.3, depth: 0.5 });
+}
+
+
 
 loadTent({ x: 20, y: 0, z: -20 }); 
 loadTent({ x: 20, y: 0, z: -10 }); 
@@ -385,17 +467,63 @@ addHeadlight({ x: 12, y: 0, z: 20 }, Math.PI / 5 + Math.PI);
 loadAPCModel({ x: -7, y: 0, z: -10 }, Math.PI / 4.5 + Math.PI, 0.0001);
 addHeadlight({ x: -7, y: 0, z: -10 }, Math.PI / 4.5 + Math.PI);
 
-
+createRuinedWalls();
 createHelipad({ x: 5, y: 0.01, z: -15 });
 
 
-const orbitControls = new OrbitControls(camera, renderer.domElement);
-const fpControls = new PointerLockControls(camera, document.body);
+const orbitControls = new OrbitControls(cameras.main, renderer.domElement);
+const fpControls = new PointerLockControls(cameras.main, document.body);
 let isFirstPerson = false; // 是否为第一人称模式
 
 document.addEventListener('click', () => fpControls.lock()); // 点击进入第一人称模式
 fpControls.addEventListener('lock', () => {isFirstPerson = true; orbitControls.enabled = false; console.log("进入第一人称模式");});
 fpControls.addEventListener('unlock', () => {isFirstPerson = false; orbitControls.enabled = true; console.log("退出第一人称模式");});
+// 监听键盘事件，按 1-4 切换摄像机
+// 监听键盘事件，按 1-4 切换摄像机
+document.addEventListener('keydown', (event) => {
+    if (event.code === 'Digit1') {
+        activeCamera = cameras.main; // 自由摄像机
+        controls.orbit.enabled = true; // 启用 OrbitControls
+        document.exitPointerLock(); // 退出鼠标锁定
+        console.log("📷 切换到自由视角");
+    }
+    if (event.code === 'Digit2') {
+        activeCamera = cameras.gunner; // 机枪手视角
+        controls.orbit.enabled = false; // 禁用 OrbitControls
+        controls.gunner.lock(); // 鼠标锁定
+        console.log("🎯 切换到机枪手视角");
+    }
+    if (event.code === 'Digit3') {
+        activeCamera = cameras.driver; // 驾驶员视角
+        controls.orbit.enabled = false;
+        controls.driver.lock();
+        console.log("🚗 切换到驾驶员视角");
+    }
+    if (event.code === 'Digit4') {
+        activeCamera = cameras.pilot; // 直升机飞行员视角
+        controls.orbit.enabled = false;
+        controls.pilot.lock();
+        console.log("🚁 切换到直升机飞行员视角");
+    }
+});
+
+// 🚀 监听鼠标退出锁定的事件
+controls.gunner.addEventListener('unlock', () => {
+    activeCamera = cameras.main;
+    controls.orbit.enabled = true;
+    console.log("🔓 退出机枪手视角");
+});
+controls.driver.addEventListener('unlock', () => {
+    activeCamera = cameras.main;
+    controls.orbit.enabled = true;
+    console.log("🔓 退出驾驶员视角");
+});
+controls.pilot.addEventListener('unlock', () => {
+    activeCamera = cameras.main;
+    controls.orbit.enabled = true;
+    console.log("🔓 退出飞行员视角");
+});
+
 
 const keys = { forward: false, backward: false, left: false, right: false };
 function handleUserInput() {
@@ -423,11 +551,11 @@ function updateCameraMovement() {
     if (keys.left) direction.x -= 1;
     if (keys.right) direction.x += 1;
     direction.normalize();
-    direction.applyQuaternion(camera.quaternion);
-    camera.position.addScaledVector(direction, moveSpeed);
+    direction.applyQuaternion(activeCamera.quaternion);
+    cameras.main.position.addScaledVector(direction, moveSpeed);
 
-    if (camera.position.y < 1) { 
-        camera.position.y = 1;
+    if (cameras.main.position.y < 1) { 
+        cameras.main.position.y = 1;
     }
 
 }
@@ -437,7 +565,17 @@ function updateCameraMovement() {
 // 动画循环
 function animate() {
     updateCameraMovement();
-    renderer.render(scene, camera);
+
+    if (activeCamera === cameras.gunner) {
+        cameras.gunner.rotation.copy(controls.gunner.getObject().rotation);
+    }
+    if (activeCamera === cameras.driver) {
+        cameras.driver.rotation.copy(controls.driver.getObject().rotation);
+    }
+    if (activeCamera === cameras.pilot) {
+        cameras.pilot.rotation.copy(controls.pilot.getObject().rotation);
+    }
+    renderer.render(scene, activeCamera);
     requestAnimationFrame(animate);
 }
 
