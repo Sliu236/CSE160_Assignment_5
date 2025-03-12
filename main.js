@@ -53,11 +53,25 @@ const envMap = cubeTextureLoader.load([
 const textureLoader = new THREE.TextureLoader();
 const mtlLoader = new MTLLoader();
 
+// 天空
+textureLoader.load('./Desert.jpg', (texture) => {
+    const skyGeometry = new THREE.SphereGeometry(60, 30, 40); // 大球体
+    skyGeometry.scale(-1, 1, 1); // 翻转法线，使纹理贴在球体内部
+
+    const skyMaterial = new THREE.MeshBasicMaterial({
+        map: texture
+    });
+
+    const skySphere = new THREE.Mesh(skyGeometry, skyMaterial);
+    scene.add(skySphere);
+});
+
 // 加载地板纹理
 const dirtTexture = textureLoader.load('./dirt.jpg');
 dirtTexture.wrapS = THREE.RepeatWrapping;
 dirtTexture.wrapT = THREE.RepeatWrapping;
-dirtTexture.repeat.set(5, 5); // 让纹理重复 5x5 次
+
+
 
 // 创建带有地板贴图的材质
 const planeMaterial = new THREE.MeshPhysicalMaterial({
@@ -71,7 +85,8 @@ const planeMaterial = new THREE.MeshPhysicalMaterial({
 });
 
 // 创建地板
-const planeSize = 60;
+const planeSize = 100;
+dirtTexture.repeat.set(planeSize / 4, planeSize / 4); // 让纹理按比例覆盖
 const planeGeometry = new THREE.PlaneGeometry(planeSize, planeSize);
 const plane = new THREE.Mesh(planeGeometry, planeMaterial);
 
@@ -84,7 +99,7 @@ scene.add(plane);
 const roadTexture = textureLoader.load('./dirt_road.jpg'); 
 roadTexture.wrapS = THREE.RepeatWrapping;
 roadTexture.wrapT = THREE.RepeatWrapping;
-roadTexture.repeat.set(3, 1); // 让纹理重复 3 次，模拟拉长的道路效果
+roadTexture.repeat.set(8, 1); // 让纹理重复 3 次，模拟拉长的道路效果
 
 // 创建道路材质
 const roadMaterial = new THREE.MeshStandardMaterial({
@@ -346,10 +361,6 @@ function addHelicopterSpotlight(helicopter, position) {
     // 绑定光源
     spotlight.target = target;
     helicopter.add(spotlight);
-
-    // **调试工具**
-    const lightHelper = new THREE.SpotLightHelper(spotlight);
-    scene.add(lightHelper);
 }
 
 loadTent({ x: 20, y: 0, z: -20 }); 
@@ -428,8 +439,6 @@ function animate() {
     updateCameraMovement();
     renderer.render(scene, camera);
     requestAnimationFrame(animate);
-    lightHelper.update();
-    cameraHelper.update();
 }
 
 animate();
