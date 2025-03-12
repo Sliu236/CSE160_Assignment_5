@@ -88,7 +88,7 @@ const textureLoader = new THREE.TextureLoader();
 const mtlLoader = new MTLLoader();
 
 // skybox (sphere)
-textureLoader.load('./Desert.jpg', (texture) => {
+textureLoader.load('/CSE160_Assignment_5/Desert.jpg', (texture) => {
     const skyGeometry = new THREE.SphereGeometry(100, 30, 40); // create a large sphere
     skyGeometry.scale(-1, 1, 1); // invert the sphere to make it inside-out
 
@@ -101,7 +101,7 @@ textureLoader.load('./Desert.jpg', (texture) => {
 });
 
 // texture for the ground
-const dirtTexture = textureLoader.load('./dirt.jpg');
+const dirtTexture = textureLoader.load('./CSE160_Assignment_5/dirt.jpg');
 dirtTexture.wrapS = THREE.RepeatWrapping;
 dirtTexture.wrapT = THREE.RepeatWrapping;
 
@@ -128,7 +128,7 @@ plane.position.y = 0;
 scene.add(plane);
 
 // Create road texture
-const roadTexture = textureLoader.load('./dirt_road.jpg'); 
+const roadTexture = textureLoader.load('./CSE160_Assignment_5/dirt_road.jpg'); 
 roadTexture.wrapS = THREE.RepeatWrapping;
 roadTexture.wrapT = THREE.RepeatWrapping;
 roadTexture.repeat.set(8, 1);
@@ -158,7 +158,7 @@ scene.add(road);
 
 
 function createBrickWall(position = { x: 0, y: 0, z: 0 }, size = { width: 1, height: 1, depth: 1 }) {
-    const brickTexture = textureLoader.load('./brickwall.png'); 
+    const brickTexture = textureLoader.load('./CSE160_Assignment_5/brickwall.png'); 
     brickTexture.wrapS = THREE.RepeatWrapping;
     brickTexture.wrapT = THREE.RepeatWrapping;
     brickTexture.repeat.set(size.width, size.height); 

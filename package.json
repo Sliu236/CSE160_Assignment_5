@@ -4,7 +4,10 @@
   "description": "This is the Assignment 5 for CSE160",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "gh-pages -d dist"
   },
   "repository": {
     "type": "git",
@@ -16,11 +19,12 @@
   "bugs": {
     "url": "https://github.com/Sliu236/CSE160_Assignment_5/issues"
   },
-  "homepage": "https://github.com/Sliu236/CSE160_Assignment_5#readme",
+  "homepage": "https://Sliu236.github.io/CSE160_Assignment_5/",
   "dependencies": {
     "three": "^0.174.0"
   },
   "devDependencies": {
+    "gh-pages": "^5.0.0",
     "vite": "^6.2.1"
   }
 }
